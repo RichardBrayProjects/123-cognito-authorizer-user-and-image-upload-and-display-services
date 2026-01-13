@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import imageService from "@/services/imageService";
@@ -80,14 +81,15 @@ const Submit: React.FC = () => {
   }
 
   return (
-    <div>
-      <div className="mt-8 max-w-2xl">
-        <div className="rounded border p-8 bg-gray-50">
-          <h2 className="mb-6 text-2xl">Upload Image</h2>
-
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-2xl">Upload Image</CardTitle>
+        </CardHeader>
+        <CardContent>
           {!user && (
-            <Alert className="mb-6 border-yellow-300 bg-yellow-100">
-              <AlertDescription className="text-yellow-800">
+            <Alert className="mb-6 border-yellow-300 bg-yellow-100 dark:border-yellow-700 dark:bg-yellow-900/20">
+              <AlertDescription className="text-yellow-800 dark:text-yellow-200">
                 Please sign in to upload files
               </AlertDescription>
             </Alert>
@@ -104,7 +106,7 @@ const Submit: React.FC = () => {
                 maxLength={40}
                 disabled={!user}
               />
-              <div className="mt-1 text-right text-xs text-gray-600">
+              <div className="mt-1 text-right text-xs text-muted-foreground">
                 {imageName.length}/40
               </div>
             </div>
@@ -119,7 +121,7 @@ const Submit: React.FC = () => {
                 accept="image/*"
               />
               {selectedFile && (
-                <div className="mt-2 text-xs text-gray-600">
+                <div className="mt-2 text-xs text-muted-foreground">
                   Selected: {selectedFile.name} (
                   {(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
                 </div>
@@ -147,8 +149,8 @@ const Submit: React.FC = () => {
               </Alert>
             )}
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
