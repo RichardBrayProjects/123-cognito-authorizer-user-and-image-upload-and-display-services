@@ -85,13 +85,8 @@ export default () => {
               ) : (
                 <DropdownMenuItem onClick={login}>Login</DropdownMenuItem>
               )}
-
               <DropdownMenuSeparator />
-
               <DropdownMenuItem onClick={goToProfile}>Profile</DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-
               <DropdownMenuItem onClick={goToSubmit}>
                 Submit an image
               </DropdownMenuItem>
