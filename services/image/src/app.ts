@@ -1,6 +1,17 @@
 import express, { Request, Response, Application } from "express";
+import cors from "cors";
+import imageRoutes from "./routes/imageRoutes";
 
 const app: Application = express();
+
+app.use(
+  cors({
+    origin: true,
+    credentials: false,
+    allowedHeaders: ["Content-Type", "Authorization"],
+    exposedHeaders: ["Authorization"],
+  })
+);
 
 app.use(express.json());
 
@@ -8,18 +19,13 @@ app.get("/health", (_req: Request, res: Response) => {
   res.json({ status: "ok", service: "image-service" });
 });
 
-app.get("/v1/gallery", (_req: Request, res: Response) => {
-  res.json({ images: [] });
-});
+app.use("/v1", imageRoutes);
 
-app.post("/v1/images", (req: Request, res: Response) => {
-  const { url, title, description } = req.body;
-  res.json({ 
-    id: "1", 
-    url: url || "", 
-    title: title || "Untitled", 
-    description: description || "" 
-  });
+app.use((err: any, _req: Request, res: Response, _next: any) => {
+  console.error("Error:", err);
+  const status = err.status || 500;
+  const message = err.message || "Internal server error";
+  res.status(status).json({ error: message });
 });
 
 export { app };

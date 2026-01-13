@@ -45,9 +45,6 @@ export class CognitoStack extends Stack {
       },
     });
 
-    // Note: RDS secret access is granted in CognitoPostConfirmationStack
-    // The Lambda reads the secret ARN from SSM at runtime
-
     this.userPool.addDomain(`${uniquePrefix}-domain`, {
       cognitoDomain: {
         domainPrefix: uniquePrefix,
@@ -55,7 +52,6 @@ export class CognitoStack extends Stack {
       managedLoginVersion: 2,
     });
 
-    // Callback URLs now point to SPA, not backend
     const callbackUrls = [
       `${cloudfrontUrl}/callback`,
       `http://localhost:3000/callback`,
@@ -161,6 +157,11 @@ export class CognitoStack extends Stack {
         },
       }
     );
+
+    // The cognito domain and client-id are printed out by the CDK stack and must be stored in the UI .env file like this ...
+    // VITE_COGNITO_DOMAIN='https://uptickart.auth.eu-west-2.amazoncognito.com'
+    // VITE_COGNITO_CLIENT_ID='7idroa0j5v6o4bgfjlm21tfv00'
+    // This is because the UI connects to Cognito directly.
 
     const cognitoDomain = `https://${uniquePrefix}.auth.${this.region}.amazoncognito.com`;
     new CfnOutput(this, "cognito-domain-output", { value: cognitoDomain });

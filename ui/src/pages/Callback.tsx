@@ -1,14 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { handleOAuthCallback } from '@/api';
-import { useToast } from '@/contexts/ToastContext';
 
 const Callback: React.FC = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { setUser } = useAuth();
-  const { showToast } = useToast();
   const hasProcessed = useRef(false);
 
   useEffect(() => {
@@ -29,15 +28,13 @@ const Callback: React.FC = () => {
 
     hasProcessed.current = true;
     handleSuccessfulAuth(code, state);
-  }, [params, navigate, setUser, showToast]);
+  }, [params, navigate, setUser]);
 
   return <p style={{ padding: 16 }}>Signing you in…</p>;
 
   // Helper functions (hoisted, so available above)
   function showErrorAndRedirect(message: string) {
-    showToast({
-      variant: 'destructive',
-      title: 'Authentication Error',
+    toast.error('Authentication Error', {
       description: message,
     });
     setTimeout(() => navigate('/', { replace: true }), 3000);

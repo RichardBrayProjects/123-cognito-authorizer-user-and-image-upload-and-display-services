@@ -1,11 +1,11 @@
 {
-  "name": "@uptickart/user-cdk",
+  "name": "@uptickart/services-cdk",
   "private": true,
   "version": "0.0.1",
   "scripts": {
     "build": "tsc",
-    "deploy": "cdk deploy --all --require-approval never --app 'tsx ./src/bin/user-api.ts'",
-    "destroy": "cdk destroy --all --force --require-approval never --app 'tsx ./src/bin/user-api.ts'",
+    "deploy": "cdk deploy --all --require-approval never --app 'tsx ./src/bin/services.ts'",
+    "destroy": "cdk destroy --all --force --require-approval never --app 'tsx ./src/bin/services.ts'",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

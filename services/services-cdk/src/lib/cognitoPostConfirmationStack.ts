@@ -1,9 +1,9 @@
-import { CfnOutput, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
-import { Construct } from 'constructs';
-import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
-import { Runtime } from 'aws-cdk-lib/aws-lambda';
-import { join } from 'path';
-import * as iam from 'aws-cdk-lib/aws-iam';
+import { CfnOutput, Stack, StackProps } from "aws-cdk-lib";
+import { Construct } from "constructs";
+import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
+import { Runtime } from "aws-cdk-lib/aws-lambda";
+import { join } from "path";
+import * as iam from "aws-cdk-lib/aws-iam";
 
 interface CognitoPostConfirmationStackProps extends StackProps {
   systemName: string;
@@ -36,20 +36,20 @@ export class CognitoPostConfirmationStack extends Stack {
     // If RDS becomes private-only in the future, add VPC configuration here:
     // vpc: vpc, vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS }, securityGroups: [lambdaSg]
     this.postConfirmationLambda = new NodejsFunction(this, uniquePrefix, {
-      entry: join(__dirname, '..', 'lambdas', 'postConfirmation.ts'),
-      handler: 'handler',
+      entry: join(__dirname, "..", "lambdas", "postConfirmation.ts"),
+      handler: "handler",
       functionName: uniquePrefix,
       runtime: Runtime.NODEJS_20_X,
       environment,
       bundling: {
-        nodeModules: ['pg', '@aws-sdk/client-ssm'],
+        nodeModules: ["pg", "@aws-sdk/client-ssm"],
       },
     });
 
     // Grant Lambda access to SSM to read RDS secret ARN
     this.postConfirmationLambda.addToRolePolicy(
       new iam.PolicyStatement({
-        actions: ['ssm:GetParameter'],
+        actions: ["ssm:GetParameter"],
         resources: [
           `arn:aws:ssm:${this.region}:${this.account}:parameter/rds/secret-arn`,
         ],
@@ -63,14 +63,14 @@ export class CognitoPostConfirmationStack extends Stack {
     // Using wildcard pattern to match the 6 random characters suffix
     this.postConfirmationLambda.addToRolePolicy(
       new iam.PolicyStatement({
-        actions: ['secretsmanager:GetSecretValue'],
+        actions: ["secretsmanager:GetSecretValue"],
         resources: [
           `arn:aws:secretsmanager:${this.region}:${this.account}:secret:system-rds/rds-credentials*`,
         ],
       })
     );
 
-    new CfnOutput(this, 'PostConfirmationLambdaArn', {
+    new CfnOutput(this, "PostConfirmationLambdaArn", {
       value: this.postConfirmationLambda.functionArn,
     });
   }

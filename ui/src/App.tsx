@@ -1,9 +1,10 @@
-import { Routes, Route } from 'react-router-dom';
-import Header from '@/components/Header';
-import Home from '@/pages/Home';
-import Profile from '@/pages/Profile';
-import Callback from '@/pages/Callback';
-import { Toaster } from '@/contexts/ToastContext';
+import { Routes, Route } from "react-router-dom";
+import Header from "@/components/Header";
+import Home from "@/pages/Home";
+import Profile from "@/pages/Profile";
+import Callback from "@/pages/Callback";
+import Submit from "@/pages/Submit";
+import { Toaster } from "@/components/ui/sonner";
 
 export default () => (
   <div className="min-h-screen bg-background">
@@ -13,6 +14,7 @@ export default () => (
         <Route path="/" element={<Home />} />
         <Route path="/callback" element={<Callback />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/submit" element={<Submit />} />
         <Route
           path="*"
           element={<p className="p-4 text-muted-foreground">Route Not Found</p>}

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import * as cdk from "aws-cdk-lib";
 import { UserApiStack } from "../lib/userApiStack";
+import { ImageApiStack } from "../lib/imageApiStack";
 import { CognitoPostConfirmationStack } from "../lib/cognitoPostConfirmationStack";
 import { CognitoStack } from "../lib/cognitoStack";
 
@@ -9,18 +10,20 @@ const app = new cdk.App();
 const domainName: string | undefined = process.env.CDK_UPTICK_DOMAIN_NAME;
 const hostedZoneName = process.env.CDK_UPTICK_ZONE_NAME;
 const hostedZoneId = process.env.CDK_UPTICK_ZONE_ID;
-const apiSubdomain = process.env.CDK_UPTICK_USER_API_SUBDOMAIN;
+const userApiSubdomain = process.env.CDK_UPTICK_USER_API_SUBDOMAIN;
+const imageApiSubdomain = process.env.CDK_UPTICK_IMAGE_API_SUBDOMAIN;
 const dbname = process.env.CDK_UPTICK_DB_NAME;
 
 if (
   !hostedZoneId ||
   !hostedZoneName ||
   !domainName ||
-  !apiSubdomain ||
+  !userApiSubdomain ||
+  !imageApiSubdomain ||
   !dbname
 ) {
   throw new Error(
-    "Missing environment variable(s): CDK_UPTICK_ZONE_ID CDK_UPTICK_ZONE_NAME CDK_UPTICK_DOMAIN_NAME CDK_UPTICK_USER_API_SUBDOMAIN CDK_UPTICK_DB_NAME must be set."
+    "Missing environment variable(s): CDK_UPTICK_ZONE_ID CDK_UPTICK_ZONE_NAME CDK_UPTICK_DOMAIN_NAME CDK_UPTICK_USER_API_SUBDOMAIN CDK_UPTICK_IMAGE_API_SUBDOMAIN CDK_UPTICK_DB_NAME must be set."
   );
 }
 
@@ -40,20 +43,29 @@ const postConfirmationStack = new CognitoPostConfirmationStack(
   }
 );
 
-// Create Cognito stack first (needed for UserApiStack)
+// Create Cognito stack first (needed for both UserApiStack and ImageApiStack)
 // This stack will automatically look up RDS secret ARN from SSM parameter /rds/secret-arn
 const cognitoStack = new CognitoStack(app, "user-cognito-stack", {
   systemName,
   postConfirmationLambda: postConfirmationStack.postConfirmationLambda,
-  apiUrl: `https://${apiSubdomain}.${domainName}`, // Temporary URL, will be updated after UserApiStack is created
+  apiUrl: `https://${userApiSubdomain}.${domainName}`, // Temporary URL, will be updated after UserApiStack is created
   cloudfrontUrl,
 });
 
-// CDK will automatically use the default region from AWS config if env is not specified
-const userApiStack = new UserApiStack(app, "user-api", {
+// Create User API stack
+new UserApiStack(app, "user-api", {
   domainName,
   hostedZoneName,
   hostedZoneId,
-  apiSubdomain,
+  apiSubdomain: userApiSubdomain,
+  userPool: cognitoStack.userPool,
+});
+
+// Create Image API stack (using the same userPool from cognitoStack)
+new ImageApiStack(app, "image-api", {
+  domainName,
+  hostedZoneName,
+  hostedZoneId,
+  apiSubdomain: imageApiSubdomain,
   userPool: cognitoStack.userPool,
 });
