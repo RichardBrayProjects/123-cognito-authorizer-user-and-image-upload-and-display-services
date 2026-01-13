@@ -3,14 +3,16 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Search, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { cn } from "@/lib/utils";
 
 export default () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -18,11 +20,15 @@ export default () => {
   const navigate = useNavigate();
 
   const { authenticated, setUser, login, logout } = useAuth();
+
   const logoutUser = async () => {
     logout();
-    setUser(null); 
-    navigate('/', { replace: true });
+    setUser(null);
+    navigate("/", { replace: true });
   };
+
+  const goToProfile = () => navigate("/profile");
+  const goToSubmit = () => navigate("/submit");
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
@@ -46,6 +52,9 @@ export default () => {
               />
             </div>
           </form>
+        </div>
+
+        <div className="flex items-center gap-2">
           <nav className="flex items-center gap-6">
             <Link
               to="/"
@@ -55,34 +64,37 @@ export default () => {
                   : "text-muted-foreground"
               }`}
             >
-              Home
+              🎨
             </Link>
-            <Link
-              to="/profile"
-              className={`text-sm font-medium transition-colors hover:text-primary ${
-                location.pathname === "/profile"
-                  ? "text-primary"
-                  : "text-muted-foreground"
-              }`}
-            >
-              Profile
-            </Link>
+
+            {/* Removed Profile from the top nav */}
           </nav>
-        </div>
-        <div className="flex items-center gap-2">
           <ThemeToggle />
+
           <DropdownMenu>
-            <DropdownMenuTrigger>
-              <Button variant="ghost" size="icon" aria-label="Account menu">
-                <User className="h-5 w-5" />
-              </Button>
+            <DropdownMenuTrigger
+              className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
+              aria-label="Account menu"
+            >
+              <User className="h-5 w-5" />
             </DropdownMenuTrigger>
+
             <DropdownMenuContent align="end">
               {authenticated ? (
                 <DropdownMenuItem onClick={logoutUser}>Logout</DropdownMenuItem>
               ) : (
                 <DropdownMenuItem onClick={login}>Login</DropdownMenuItem>
               )}
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem onClick={goToProfile}>Profile</DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem onClick={goToSubmit}>
+                Submit an image
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
