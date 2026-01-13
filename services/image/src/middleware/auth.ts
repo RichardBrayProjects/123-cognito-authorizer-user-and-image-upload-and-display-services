@@ -52,6 +52,10 @@ export function attachAuth(req: Request, _res: Response, next: NextFunction) {
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const auth = (req as any).auth as AuthUser | undefined;
   if (!auth || !auth.sub) {
+    // Add CORS headers to error response
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
     return res.status(401).json({ error: "Authentication required" });
   }
   next();
@@ -61,6 +65,10 @@ export function requireGroup(groupName: string) {
   return (req: Request, res: Response, next: NextFunction) => {
     const auth = (req as any).auth as AuthUser | undefined;
     if (!auth || !auth.groups.includes(groupName)) {
+      // Add CORS headers to error response
+      res.header("Access-Control-Allow-Origin", "*");
+      res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+      res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
       return res.status(403).json({ error: "Insufficient permissions" });
     }
     return next();

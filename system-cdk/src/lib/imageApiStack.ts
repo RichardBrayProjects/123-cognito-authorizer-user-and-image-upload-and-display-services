@@ -16,6 +16,11 @@ import {
   LambdaIntegration,
   CognitoUserPoolsAuthorizer,
   AuthorizationType,
+  MockIntegration,
+  PassthroughBehavior,
+  MethodResponse,
+  GatewayResponse,
+  ResponseType,
 } from "aws-cdk-lib/aws-apigateway";
 import { UserPool } from "aws-cdk-lib/aws-cognito";
 import { PolicyStatement } from "aws-cdk-lib/aws-iam";
@@ -202,12 +207,100 @@ export class ImageApiStack extends Stack {
       proxy: true,
     });
 
+    // Public /health endpoint
+    const healthResource = api.root.addResource("health");
+    healthResource.addMethod("GET", lambdaIntegration, {
+      authorizationType: AuthorizationType.NONE,
+    });
+    // Add OPTIONS for /health endpoint
+    healthResource.addMethod("OPTIONS", new MockIntegration({
+      integrationResponses: [
+        {
+          statusCode: "200",
+          responseParameters: {
+            "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+            "method.response.header.Access-Control-Allow-Origin": "'*'",
+            "method.response.header.Access-Control-Allow-Methods": "'GET,OPTIONS'",
+          },
+        },
+      ],
+      passthroughBehavior: PassthroughBehavior.NEVER,
+      requestTemplates: {
+        "application/json": '{"statusCode": 200}',
+      },
+    }), {
+      methodResponses: [
+        {
+          statusCode: "200",
+          responseParameters: {
+            "method.response.header.Access-Control-Allow-Headers": true,
+            "method.response.header.Access-Control-Allow-Origin": true,
+            "method.response.header.Access-Control-Allow-Methods": true,
+          },
+        },
+      ],
+      authorizationType: AuthorizationType.NONE,
+    });
+
     const v1Resource = api.root.addResource("v1");
+    const proxyResource = v1Resource.addResource("{proxy+}");
+
+    // Add OPTIONS method for CORS preflight (no authentication required)
+    // This must be added before the ANY method to ensure OPTIONS requests are handled
+    proxyResource.addMethod("OPTIONS", new MockIntegration({
+      integrationResponses: [
+        {
+          statusCode: "200",
+          responseParameters: {
+            "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'",
+            "method.response.header.Access-Control-Allow-Origin": "'*'",
+            "method.response.header.Access-Control-Allow-Methods": "'GET,POST,PUT,DELETE,OPTIONS'",
+          },
+        },
+      ],
+      passthroughBehavior: PassthroughBehavior.NEVER,
+      requestTemplates: {
+        "application/json": '{"statusCode": 200}',
+      },
+    }), {
+      methodResponses: [
+        {
+          statusCode: "200",
+          responseParameters: {
+            "method.response.header.Access-Control-Allow-Headers": true,
+            "method.response.header.Access-Control-Allow-Origin": true,
+            "method.response.header.Access-Control-Allow-Methods": true,
+          },
+        },
+      ],
+      authorizationType: AuthorizationType.NONE,
+    });
 
     // All /v1/* routes require Cognito authentication
-    v1Resource.addResource("{proxy+}").addMethod("ANY", lambdaIntegration, {
+    proxyResource.addMethod("ANY", lambdaIntegration, {
       authorizationType: AuthorizationType.COGNITO,
       authorizer: authorizer,
+    });
+
+    // Add gateway responses with CORS headers for authorizer errors
+    api.addGatewayResponse("UnauthorizedGatewayResponse", {
+      type: ResponseType.UNAUTHORIZED,
+      statusCode: "401",
+      responseHeaders: {
+        "Access-Control-Allow-Origin": "'*'",
+        "Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "Access-Control-Allow-Methods": "'GET,POST,PUT,DELETE,OPTIONS'",
+      },
+    });
+
+    api.addGatewayResponse("AccessDeniedGatewayResponse", {
+      type: ResponseType.ACCESS_DENIED,
+      statusCode: "403",
+      responseHeaders: {
+        "Access-Control-Allow-Origin": "'*'",
+        "Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "Access-Control-Allow-Methods": "'GET,POST,PUT,DELETE,OPTIONS'",
+      },
     });
 
     new CfnOutput(this, "ApiUrl", {
