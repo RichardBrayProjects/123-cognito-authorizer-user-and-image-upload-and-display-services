@@ -4,9 +4,17 @@
   "version": "0.0.1",
   "scripts": {
     "build": "tsc",
-    "deploy-cloudfront": "cdk deploy system-cloudfront --require-approval never --app 'tsx ./src/bin/cloudfront.ts'",
-    "destroy-cloudfront": "cdk destroy system-cloudfront --force --require-approval never --app 'tsx ./src/bin/cloudfront.ts'",
+    "deploy-ui-cloudfront": "cdk deploy system-ui-cloudfront --require-approval never --app 'tsx ./src/bin/ui-cloudfront.ts'",
+    "deploy-images-cloudfront": "cdk deploy system-images-cloudfront --require-approval never --app 'tsx ./src/bin/images-cloudfront.ts'",
+    "deploy-cognito": "cdk deploy --all --require-approval never --app 'tsx ./src/bin/cognito.ts'",
+    "deploy-user-api": "cdk deploy user-api --require-approval never --app 'tsx ./src/bin/user-api.ts'",
+    "deploy-image-api": "cdk deploy image-api --require-approval never --app 'tsx ./src/bin/image-api.ts'",
     "deploy-rds": "cdk deploy system-rds --require-approval never --app 'tsx ./src/bin/rds.ts'",
+    "destroy-ui-cloudfront": "cdk destroy system-ui-cloudfront --force --require-approval never --app 'tsx ./src/bin/ui-cloudfront.ts'",
+    "destroy-images-cloudfront": "cdk destroy system-images-cloudfront --force --require-approval never --app 'tsx ./src/bin/images-cloudfront.ts'",
+    "destroy-cognito": "cdk destroy --all --force --require-approval never --app 'tsx ./src/bin/cognito.ts'",
+    "destroy-user-api": "cdk destroy user-api --force --require-approval never --app 'tsx ./src/bin/user-api.ts'",
+    "destroy-image-api": "cdk destroy image-api --force --require-approval never --app 'tsx ./src/bin/image-api.ts'",
     "destroy-rds": "cdk destroy system-rds --force --require-approval never --app 'tsx ./src/bin/rds.ts'",
     "type-check": "tsc --noEmit"
   },
@@ -15,8 +23,14 @@
     "constructs": "^10.4.4"
   },
   "devDependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.700.0",
+    "@aws-sdk/client-ssm": "^3.700.0",
+    "@types/aws-lambda": "^8.10.145",
     "@types/node": "^25.0.3",
+    "@types/pg": "^8.11.10",
     "aws-cdk": "^2.234.1",
+    "esbuild": "^0.24.0",
+    "pg": "^8.13.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }

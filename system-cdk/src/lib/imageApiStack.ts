@@ -18,6 +18,7 @@ import {
   AuthorizationType,
 } from "aws-cdk-lib/aws-apigateway";
 import { UserPool } from "aws-cdk-lib/aws-cognito";
+import { PolicyStatement } from "aws-cdk-lib/aws-iam";
 import {
   HostedZone,
   ARecord,
@@ -29,22 +30,31 @@ import {
   Certificate,
   CertificateValidation,
 } from "aws-cdk-lib/aws-certificatemanager";
+import { StringParameter } from "aws-cdk-lib/aws-ssm";
 
-interface UserApiStackProps extends StackProps {
+interface ImageApiStackProps extends StackProps {
   domainName?: string;
   hostedZoneId?: string;
   hostedZoneName?: string;
   apiSubdomain?: string;
-  userPool: UserPool;
+  dbname: string;
+  imagesS3BucketName: string;
+  imagesCloudFrontDomain: string;
 }
 
-export class UserApiStack extends Stack {
-  public readonly apiUrl: string;
-
-  constructor(scope: Construct, id: string, props: UserApiStackProps) {
+export class ImageApiStack extends Stack {
+  constructor(scope: Construct, id: string, props: ImageApiStackProps) {
     super(scope, id, props);
 
-    const { domainName, hostedZoneId, hostedZoneName, apiSubdomain } = props;
+    const {
+      domainName,
+      hostedZoneId,
+      hostedZoneName,
+      apiSubdomain,
+      dbname,
+      imagesS3BucketName,
+      imagesCloudFrontDomain,
+    } = props;
 
     if (!hostedZoneName || !hostedZoneId || !domainName) {
       throw new Error(
@@ -52,8 +62,19 @@ export class UserApiStack extends Stack {
       );
     }
 
+    // Import UserPool from SSM Parameter Store
+    const userPoolArnParam = StringParameter.fromStringParameterName(
+      this,
+      "UserPoolArnParam",
+      "/cognito/user-pool-arn"
+    );
+    const userPool = UserPool.fromUserPoolArn(
+      this,
+      "UserPool",
+      userPoolArnParam.stringValue
+    );
+
     const apiDomainName = `${apiSubdomain}.${domainName}`;
-    this.apiUrl = `https://${apiDomainName}`;
 
     const zone = HostedZone.fromHostedZoneAttributes(
       this,
@@ -73,9 +94,15 @@ export class UserApiStack extends Stack {
     // when it's still attached to API Gateway domain
     certificate.applyRemovalPolicy(RemovalPolicy.RETAIN);
 
+    const environment: Record<string, string> = {
+      RDS_DB_NAME: dbname,
+      S3_BUCKET_NAME: imagesS3BucketName,
+      CLOUDFRONT_DOMAIN: imagesCloudFrontDomain,
+    };
+
     // Create Lambda function using NodejsFunction for automatic bundling
-    const lambdaFunction = new NodejsFunction(this, "UserServiceFunction", {
-      entry: "../user/src/index.ts",
+    const lambdaFunction = new NodejsFunction(this, "ImageServiceFunction", {
+      entry: "../services/image/src/index.ts",
       handler: "handler",
       runtime: Runtime.NODEJS_20_X,
       timeout: Duration.seconds(30),
@@ -84,18 +111,52 @@ export class UserApiStack extends Stack {
         minify: true,
         sourceMap: false,
         target: "es2021",
-        nodeModules: ["express", "cors"],
+        nodeModules: [
+          "express",
+          "cors",
+          "pg",
+          "@aws-sdk/client-s3",
+          "@aws-sdk/s3-request-presigner",
+          "@aws-sdk/client-secrets-manager",
+          "@aws-sdk/client-ssm",
+          "uuid",
+        ],
       },
-      environment: {
-        API_URL: this.apiUrl,
-        // Note: AWS_REGION is automatically set by Lambda runtime, don't set it manually
-      },
+      environment,
     });
 
+    // Grant Lambda access to SSM to read RDS secret ARN
+    lambdaFunction.addToRolePolicy(
+      new PolicyStatement({
+        actions: ["ssm:GetParameter"],
+        resources: [
+          `arn:aws:ssm:${this.region}:${this.account}:parameter/rds/secret-arn`,
+        ],
+      })
+    );
+
+    // Grant Lambda access to Secrets Manager for RDS credentials
+    lambdaFunction.addToRolePolicy(
+      new PolicyStatement({
+        actions: ["secretsmanager:GetSecretValue"],
+        resources: [
+          `arn:aws:secretsmanager:${this.region}:${this.account}:secret:system-rds/rds-credentials*`,
+        ],
+      })
+    );
+
+    // Grant Lambda access to S3
+    lambdaFunction.addToRolePolicy(
+      new PolicyStatement({
+        actions: ["s3:PutObject"],
+        resources: [`arn:aws:s3:::${imagesS3BucketName}/*`],
+      })
+    );
+
     // Create API Gateway
-    const api = new RestApi(this, "UserApi", {
-      restApiName: "User Service API",
-      description: "API Gateway for User Service",
+    const api = new RestApi(this, "ImageApi", {
+      restApiName: "Image Service API",
+      description: "API Gateway for Image Service",
       endpointConfiguration: {
         types: [EndpointType.REGIONAL],
       },
@@ -132,7 +193,7 @@ export class UserApiStack extends Stack {
       this,
       "CognitoAuthorizer",
       {
-        cognitoUserPools: [props.userPool],
+        cognitoUserPools: [userPool],
         identitySource: "method.request.header.Authorization",
       }
     );
@@ -143,20 +204,10 @@ export class UserApiStack extends Stack {
 
     const v1Resource = api.root.addResource("v1");
 
-    // Public /v1/config endpoint
-    v1Resource.addResource("config").addMethod("GET", lambdaIntegration, {
-      authorizationType: AuthorizationType.NONE,
-    });
-
-    // All other /v1/* routes require Cognito authentication
+    // All /v1/* routes require Cognito authentication
     v1Resource.addResource("{proxy+}").addMethod("ANY", lambdaIntegration, {
       authorizationType: AuthorizationType.COGNITO,
       authorizer: authorizer,
-    });
-
-    // Public /health endpoint
-    api.root.addResource("health").addMethod("GET", lambdaIntegration, {
-      authorizationType: AuthorizationType.NONE,
     });
 
     new CfnOutput(this, "ApiUrl", {

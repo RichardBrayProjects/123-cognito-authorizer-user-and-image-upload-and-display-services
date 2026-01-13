@@ -7,6 +7,7 @@ import {
 import { Construct } from "constructs";
 import { CfnOutput, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
+import { StringParameter } from "aws-cdk-lib/aws-ssm";
 
 interface CognitoStackProps extends StackProps {
   systemName: string;
@@ -174,6 +175,13 @@ export class CognitoStack extends Stack {
       userPoolId: this.userPool.userPoolId,
       groupName: "administrators",
       description: "Administrator users with elevated permissions",
+    });
+
+    // Store UserPool ARN in SSM Parameter Store for other stacks to reference
+    new StringParameter(this, "UserPoolArnParameter", {
+      parameterName: "/cognito/user-pool-arn",
+      stringValue: this.userPool.userPoolArn,
+      description: "Cognito User Pool ARN for use by API Gateway stacks",
     });
   }
 }

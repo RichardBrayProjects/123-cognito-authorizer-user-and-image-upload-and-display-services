@@ -1,9 +1,9 @@
-import { Request, Response, NextFunction } from 'express';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { v4 as uuidv4 } from 'uuid';
-import { AuthUser } from '../middleware/auth';
-import { queryDatabase } from '../utils/db';
+import { Request, Response, NextFunction } from "express";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { v4 as uuidv4 } from "uuid";
+import { AuthUser } from "../middleware/auth";
+import { queryDatabase } from "../utils/db";
 
 // S3Client will use the default region from AWS SDK config
 // (AWS_REGION env var set by Lambda runtime, or AWS config)
@@ -13,10 +13,6 @@ const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME;
 const CLOUDFRONT_DOMAIN = process.env.CLOUDFRONT_DOMAIN;
 
 function generateCloudFrontUrl(uuidFilename: string): string {
-  if (!CLOUDFRONT_DOMAIN) {
-    console.warn('CLOUDFRONT_DOMAIN not set, falling back to S3 URL');
-    return `https://${S3_BUCKET_NAME}.s3.amazonaws.com/${uuidFilename}`;
-  }
   return `https://${CLOUDFRONT_DOMAIN}/${uuidFilename}`;
 }
 
@@ -25,14 +21,14 @@ export async function submitHandler(
   res: Response,
   next: NextFunction
 ) {
-  console.log('====================================');
-  console.log('ENTERED router.post(/submit)');
-  console.log('====================================');
+  console.log("====================================");
+  console.log("ENTERED router.post(/submit)");
+  console.log("====================================");
 
   try {
     const auth = (req as any).auth as AuthUser | undefined;
     if (!auth || !auth.sub) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return res.status(401).json({ error: "Authentication required" });
     }
 
     // Use sub as username (Cognito user identifier)
@@ -41,17 +37,19 @@ export async function submitHandler(
 
     console.log(`Authenticated user - username: ${username}`);
 
-    if (!imageName || typeof imageName !== 'string') {
-      return res.status(400).json({ error: 'Image name is required' });
+    if (!imageName || typeof imageName !== "string") {
+      return res.status(400).json({ error: "Image name is required" });
     }
 
     if (imageName.length > 40) {
-      return res.status(400).json({ error: 'Image name must be 40 characters or less' });
+      return res
+        .status(400)
+        .json({ error: "Image name must be 40 characters or less" });
     }
 
     if (!S3_BUCKET_NAME) {
-      console.error('S3_BUCKET_NAME environment variable not set');
-      return res.status(500).json({ error: 'Server configuration error' });
+      console.error("S3_BUCKET_NAME environment variable not set");
+      return res.status(500).json({ error: "Server configuration error" });
     }
 
     const uuidFilename = uuidv4();
@@ -60,7 +58,7 @@ export async function submitHandler(
     const putObjectCommand = new PutObjectCommand({
       Bucket: S3_BUCKET_NAME,
       Key: uuidFilename,
-      ContentType: 'image/*',
+      ContentType: "image/*",
     });
 
     const presignedUrl = await getSignedUrl(s3Client, putObjectCommand, {
@@ -74,13 +72,13 @@ export async function submitHandler(
       id: number;
       created_at: string;
     }>(
-      'INSERT INTO images (username, uuid_filename, image_name, created_at) VALUES ($1, $2, $3, NOW()) RETURNING id, created_at',
+      "INSERT INTO images (username, uuid_filename, image_name, created_at) VALUES ($1, $2, $3, NOW()) RETURNING id, created_at",
       [username, uuidFilename, imageName.trim()]
     );
 
     if (result.rows.length === 0) {
-      console.error('Failed to insert image record into database');
-      return res.status(500).json({ error: 'Failed to create image record' });
+      console.error("Failed to insert image record into database");
+      return res.status(500).json({ error: "Failed to create image record" });
     }
 
     const imageRecord = result.rows[0];
@@ -94,7 +92,7 @@ export async function submitHandler(
       presignedUrl,
       imageId: imageRecord.id,
       uuidFilename,
-      message: 'Presigned URL generated successfully',
+      message: "Presigned URL generated successfully",
     });
   } catch (err) {
     return next(err);
@@ -106,14 +104,14 @@ export async function galleryHandler(
   res: Response,
   next: NextFunction
 ) {
-  console.log('====================================');
-  console.log('ENTERED router.get(/gallery)');
-  console.log('====================================');
+  console.log("====================================");
+  console.log("ENTERED router.get(/gallery)");
+  console.log("====================================");
 
   try {
     const auth = (req as any).auth as AuthUser | undefined;
     if (!auth || !auth.sub) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return res.status(401).json({ error: "Authentication required" });
     }
 
     const username = auth.sub;
@@ -122,7 +120,9 @@ export async function galleryHandler(
     // Get limit from query params, default to 100
     const limit = parseInt(req.query.limit as string) || 100;
     if (limit < 1 || limit > 1000) {
-      return res.status(400).json({ error: 'Limit must be between 1 and 1000' });
+      return res
+        .status(400)
+        .json({ error: "Limit must be between 1 and 1000" });
     }
 
     console.log(`Fetching all images with limit: ${limit}`);

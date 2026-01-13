@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-BUCKET_NAME="richardbraytutor-uptick-cloudfront"
+BUCKET_NAME="${CDK_UPTICK_UI_S3_BUCKET_NAME:-uptickart_ui_bucket}"
 DISTRIBUTION_ID="${CLOUDFRONT_DISTRIBUTION_ID:-}"
 
 echo "🏗️  Building React application..."

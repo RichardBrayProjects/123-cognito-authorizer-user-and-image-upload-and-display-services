@@ -60,46 +60,6 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  services/services-cdk:
-    dependencies:
-      aws-cdk-lib:
-        specifier: ^2.234.1
-        version: 2.234.1(constructs@10.4.4)
-      constructs:
-        specifier: ^10.4.4
-        version: 10.4.4
-    devDependencies:
-      '@aws-sdk/client-secrets-manager':
-        specifier: ^3.700.0
-        version: 3.966.0
-      '@aws-sdk/client-ssm':
-        specifier: ^3.700.0
-        version: 3.966.0
-      '@types/aws-lambda':
-        specifier: ^8.10.145
-        version: 8.10.159
-      '@types/node':
-        specifier: ^25.0.3
-        version: 25.0.3
-      '@types/pg':
-        specifier: ^8.11.10
-        version: 8.16.0
-      aws-cdk:
-        specifier: ^2.234.1
-        version: 2.1100.3
-      esbuild:
-        specifier: ^0.24.0
-        version: 0.24.2
-      pg:
-        specifier: ^8.13.1
-        version: 8.16.3
-      tsx:
-        specifier: ^4.21.0
-        version: 4.21.0
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-
   services/user:
     dependencies:
       '@aws-sdk/client-ssm':
@@ -140,12 +100,30 @@ importers:
         specifier: ^10.4.4
         version: 10.4.4
     devDependencies:
+      '@aws-sdk/client-secrets-manager':
+        specifier: ^3.700.0
+        version: 3.966.0
+      '@aws-sdk/client-ssm':
+        specifier: ^3.700.0
+        version: 3.966.0
+      '@types/aws-lambda':
+        specifier: ^8.10.145
+        version: 8.10.159
       '@types/node':
         specifier: ^25.0.3
         version: 25.0.3
+      '@types/pg':
+        specifier: ^8.11.10
+        version: 8.16.0
       aws-cdk:
         specifier: ^2.234.1
         version: 2.1100.3
+      esbuild:
+        specifier: ^0.24.0
+        version: 0.24.2
+      pg:
+        specifier: ^8.13.1
+        version: 8.16.3
       tsx:
         specifier: ^4.21.0
         version: 4.21.0
