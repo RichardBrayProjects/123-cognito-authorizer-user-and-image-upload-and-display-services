@@ -24,10 +24,13 @@ interface ExtendedRequest extends Request {
   };
 }
 
-export function attachAuth(req: Request, _res: Response, next: NextFunction) {
+export function attachAuth(
+  req: Request,
+  _res: Response,
+  next: NextFunction
+) {
   const extendedReq = req as ExtendedRequest;
-  const claims =
-    extendedReq.apiGateway?.event?.requestContext?.authorizer?.claims;
+  const claims = extendedReq.apiGateway?.event?.requestContext?.authorizer?.claims;
 
   if (claims) {
     let groups: string[] = [];

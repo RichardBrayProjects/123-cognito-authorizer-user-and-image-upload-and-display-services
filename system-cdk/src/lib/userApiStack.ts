@@ -29,13 +29,13 @@ import {
   Certificate,
   CertificateValidation,
 } from "aws-cdk-lib/aws-certificatemanager";
-import { StringParameter } from "aws-cdk-lib/aws-ssm";
 
 interface UserApiStackProps extends StackProps {
   domainName?: string;
   hostedZoneId?: string;
   hostedZoneName?: string;
   apiSubdomain?: string;
+  userPool: UserPool;
 }
 
 export class UserApiStack extends Stack {
@@ -52,17 +52,8 @@ export class UserApiStack extends Stack {
       );
     }
 
-    // Import UserPool from SSM Parameter Store
-    const userPoolArnParam = StringParameter.fromStringParameterName(
-      this,
-      "UserPoolArnParam",
-      "/cognito/user-pool-arn"
-    );
-    const userPool = UserPool.fromUserPoolArn(
-      this,
-      "UserPool",
-      userPoolArnParam.stringValue
-    );
+    // Use UserPool passed as prop
+    const { userPool } = props;
 
     const apiDomainName = `${apiSubdomain}.${domainName}`;
     this.apiUrl = `https://${apiDomainName}`;

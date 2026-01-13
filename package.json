@@ -10,17 +10,13 @@
     "migrate-rds": "pnpm -C system-cdk/scripts run migrate-database",
     "deploy-ui-cloudfront": "pnpm -C system-cdk run deploy-ui-cloudfront",
     "deploy-images-cloudfront": "pnpm -C system-cdk run deploy-images-cloudfront",
-    "deploy-cognito": "pnpm -C system-cdk run deploy-cognito",
-    "deploy-user-api": "pnpm -C system-cdk run deploy-user-api",
-    "deploy-image-api": "pnpm -C system-cdk run deploy-image-api",
+    "deploy-services": "pnpm -C system-cdk run deploy-services",
     "deploy-ui": "pnpm -C ui run deploy",
-    "deploy-all": "pnpm deploy-rds && pnpm migrate-rds && pnpm deploy-ui-cloudfront && pnpm deploy-images-cloudfront && pnpm deploy-cognito && pnpm deploy-user-api && pnpm deploy-image-api && pnpm deploy-ui",
+    "deploy-all": "pnpm deploy-rds && pnpm migrate-rds && pnpm deploy-ui-cloudfront && pnpm deploy-images-cloudfront && pnpm deploy-services && pnpm deploy-ui",
     "destroy-rds": "pnpm -C system-cdk run destroy-rds",
-    "destroy-cognito": "pnpm -C system-cdk run destroy-cognito",
-    "destroy-user-api": "pnpm -C system-cdk run destroy-user-api",
-    "destroy-image-api": "pnpm -C system-cdk run destroy-image-api",
+    "destroy-services": "pnpm -C system-cdk run destroy-services",
     "destroy-ui-cloudfront": "pnpm -C system-cdk run destroy-ui-cloudfront",
     "destroy-images-cloudfront": "pnpm -C system-cdk run destroy-images-cloudfront",
-    "destroy-all": "pnpm destroy-image-api && pnpm destroy-user-api && pnpm destroy-cognito && pnpm destroy-images-cloudfront && pnpm destroy-ui-cloudfront && pnpm destroy-rds"
+    "destroy-all": "pnpm destroy-services && pnpm destroy-images-cloudfront && pnpm destroy-ui-cloudfront && pnpm destroy-rds"
   }
 }

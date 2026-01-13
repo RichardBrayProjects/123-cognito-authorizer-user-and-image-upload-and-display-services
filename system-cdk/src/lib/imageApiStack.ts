@@ -35,7 +35,6 @@ import {
   Certificate,
   CertificateValidation,
 } from "aws-cdk-lib/aws-certificatemanager";
-import { StringParameter } from "aws-cdk-lib/aws-ssm";
 
 interface ImageApiStackProps extends StackProps {
   domainName?: string;
@@ -45,6 +44,7 @@ interface ImageApiStackProps extends StackProps {
   dbname: string;
   imagesS3BucketName: string;
   imagesCloudFrontDomain: string;
+  userPool: UserPool;
 }
 
 export class ImageApiStack extends Stack {
@@ -67,17 +67,8 @@ export class ImageApiStack extends Stack {
       );
     }
 
-    // Import UserPool from SSM Parameter Store
-    const userPoolArnParam = StringParameter.fromStringParameterName(
-      this,
-      "UserPoolArnParam",
-      "/cognito/user-pool-arn"
-    );
-    const userPool = UserPool.fromUserPoolArn(
-      this,
-      "UserPool",
-      userPoolArnParam.stringValue
-    );
+    // Use UserPool passed as prop
+    const { userPool } = props;
 
     const apiDomainName = `${apiSubdomain}.${domainName}`;
 
@@ -194,9 +185,10 @@ export class ImageApiStack extends Stack {
     });
 
     // Create Cognito authorizer
+    // Force recreation by using a unique ID
     const authorizer = new CognitoUserPoolsAuthorizer(
       this,
-      "CognitoAuthorizer",
+      "ImageApiCognitoAuthorizer",
       {
         cognitoUserPools: [userPool],
         identitySource: "method.request.header.Authorization",
@@ -277,7 +269,20 @@ export class ImageApiStack extends Stack {
     });
 
     // All /v1/* routes require Cognito authentication
-    proxyResource.addMethod("ANY", lambdaIntegration, {
+    // Add explicit methods for common HTTP verbs
+    proxyResource.addMethod("GET", lambdaIntegration, {
+      authorizationType: AuthorizationType.COGNITO,
+      authorizer: authorizer,
+    });
+    proxyResource.addMethod("POST", lambdaIntegration, {
+      authorizationType: AuthorizationType.COGNITO,
+      authorizer: authorizer,
+    });
+    proxyResource.addMethod("PUT", lambdaIntegration, {
+      authorizationType: AuthorizationType.COGNITO,
+      authorizer: authorizer,
+    });
+    proxyResource.addMethod("DELETE", lambdaIntegration, {
       authorizationType: AuthorizationType.COGNITO,
       authorizer: authorizer,
     });
