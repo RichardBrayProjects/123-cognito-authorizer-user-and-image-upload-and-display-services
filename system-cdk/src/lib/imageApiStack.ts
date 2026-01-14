@@ -89,6 +89,9 @@ export class ImageApiStack extends Stack {
       RDS_DB_NAME: dbname,
       S3_BUCKET_NAME: imagesS3BucketName,
       CLOUDFRONT_DOMAIN: imagesCloudFrontDomain,
+      // S3 bucket is in us-east-1 (created by CloudFront stack)
+      // Lambda runs in eu-west-2, so we need to explicitly set the S3 region
+      S3_BUCKET_REGION: "us-east-1",
     };
 
     // Create Lambda function using NodejsFunction for automatic bundling

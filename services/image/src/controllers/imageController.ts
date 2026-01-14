@@ -5,9 +5,10 @@ import { v4 as uuidv4 } from "uuid";
 import { AuthUser } from "../middleware/auth";
 import { queryDatabase } from "../utils/db";
 
-// S3Client will use the default region from AWS SDK config
-// (AWS_REGION env var set by Lambda runtime, or AWS config)
-const s3Client = new S3Client({});
+// S3Client must use us-east-1 region where the bucket is located
+// (bucket is created by CloudFront stack in us-east-1, but Lambda runs in eu-west-2)
+const S3_BUCKET_REGION = process.env.S3_BUCKET_REGION || "us-east-1";
+const s3Client = new S3Client({ region: S3_BUCKET_REGION });
 
 const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME;
 const CLOUDFRONT_DOMAIN = process.env.CLOUDFRONT_DOMAIN;

@@ -1,7 +1,7 @@
 import { AaaaRecord, ARecord, RecordTarget } from "aws-cdk-lib/aws-route53";
 import { CloudFrontTarget } from "aws-cdk-lib/aws-route53-targets";
 import { Construct } from "constructs";
-import { BlockPublicAccess, Bucket } from "aws-cdk-lib/aws-s3";
+import { BlockPublicAccess, Bucket, CorsRule, HttpMethods } from "aws-cdk-lib/aws-s3";
 import {
   CachePolicy,
   Distribution,
@@ -36,12 +36,39 @@ export class ImagesCloudFrontStack extends Stack {
 
     const { domainName, hostedZoneId, hostedZoneName, bucketName } = props;
 
-    // Create S3 bucket for images
+    // Create S3 bucket for images with CORS configuration
+    // For presigned URL uploads, we need to allow Content-Type and common x-amz-* headers
+    // Note: Bucket is created in eu-west-2 to match Lambda region, even though CloudFront stack is in us-east-1
     const imagesBucket = new Bucket(this, "ImagesBucket", {
       bucketName,
       removalPolicy: RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
+      // CORS configuration for presigned URL uploads from browser
+      // Bucket is created in us-east-1 (CloudFront stack region)
+      // CloudFront can access buckets in any region
+      cors: [
+        {
+          allowedMethods: [HttpMethods.GET, HttpMethods.PUT, HttpMethods.HEAD, HttpMethods.POST],
+          allowedOrigins: [
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "https://www.uptickart.com",
+            "https://uptickart.com",
+          ],
+          allowedHeaders: [
+            "Content-Type",
+            "Content-Length",
+            "x-amz-content-sha256",
+            "x-amz-date",
+            "x-amz-security-token",
+            "x-amz-checksum-crc32",
+            "x-amz-sdk-checksum-algorithm",
+          ],
+          exposedHeaders: ["ETag", "x-amz-request-id"],
+          maxAge: 3000,
+        },
+      ],
     });
 
     const imageSubdomain = `images.${domainName}`;

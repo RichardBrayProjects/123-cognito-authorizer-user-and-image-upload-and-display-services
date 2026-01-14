@@ -128,9 +128,14 @@ export async function authenticatedFetch(
   url: string,
   options: RequestInit = {}
 ): Promise<Response> {
-  const token = getAccessToken();
+  // API Gateway Cognito authorizer requires ID token, not access token
+  // Try ID token first, fall back to access token for backwards compatibility
+  const idToken = sessionStorage.getIdToken();
+  const accessToken = getAccessToken();
+  const token = idToken || accessToken;
+  
   if (!token) {
-    throw new Error("No access token available");
+    throw new Error("No token available");
   }
 
   const headers = new Headers(options.headers);
