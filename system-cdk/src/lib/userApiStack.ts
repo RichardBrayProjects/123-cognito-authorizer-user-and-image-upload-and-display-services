@@ -14,8 +14,6 @@ import {
   EndpointType,
   SecurityPolicy,
   LambdaIntegration,
-  CognitoUserPoolsAuthorizer,
-  AuthorizationType,
 } from "aws-cdk-lib/aws-apigateway";
 import { UserPool } from "aws-cdk-lib/aws-cognito";
 import {
@@ -51,9 +49,6 @@ export class UserApiStack extends Stack {
         "Unexpected missing hostedZone || hostedZoneId || domainName"
       );
     }
-
-    // Use UserPool passed as prop
-    const { userPool } = props;
 
     const apiDomainName = `${apiSubdomain}.${domainName}`;
     this.apiUrl = `https://${apiDomainName}`;
@@ -130,36 +125,14 @@ export class UserApiStack extends Stack {
       target: RecordTarget.fromAlias(new ApiGatewayDomain(apiDomain)),
     });
 
-    // Create Cognito authorizer
-    const authorizer = new CognitoUserPoolsAuthorizer(
-      this,
-      "CognitoAuthorizer",
-      {
-        cognitoUserPools: [userPool],
-        identitySource: "method.request.header.Authorization",
-      }
-    );
-
     const lambdaIntegration = new LambdaIntegration(lambdaFunction, {
       proxy: true,
     });
 
-    const v1Resource = api.root.addResource("v1");
-
-    // Public /v1/config endpoint
-    v1Resource.addResource("config").addMethod("GET", lambdaIntegration, {
-      authorizationType: AuthorizationType.NONE,
-    });
-
-    // All other /v1/* routes require Cognito authentication
-    v1Resource.addResource("{proxy+}").addMethod("ANY", lambdaIntegration, {
-      authorizationType: AuthorizationType.COGNITO,
-      authorizer: authorizer,
-    });
-
-    // Public /health endpoint
-    api.root.addResource("health").addMethod("GET", lambdaIntegration, {
-      authorizationType: AuthorizationType.NONE,
+    // Catch-all proxy for all routes (public routes like /health, /v1/config, /v1/profile)
+    // This makes all routes publicly accessible without Cognito authorization
+    api.root.addProxy({
+      defaultIntegration: lambdaIntegration,
     });
 
     new CfnOutput(this, "ApiUrl", {

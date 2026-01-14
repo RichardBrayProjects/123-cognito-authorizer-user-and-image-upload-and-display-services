@@ -30,9 +30,35 @@ export function attachAuth(
   next: NextFunction
 ) {
   const extendedReq = req as ExtendedRequest;
-  const claims = extendedReq.apiGateway?.event?.requestContext?.authorizer?.claims;
-
+  
+  // Extract claims from API Gateway event
+  // For REST API with Cognito authorizer, claims are at event.requestContext.authorizer.claims
+  // The event is manually attached to req.apiGateway.event by middleware in app.ts
+  let event: any = null;
+  if (extendedReq.apiGateway?.event) {
+    event = extendedReq.apiGateway.event;
+  } else if ((req as any).apiGateway?.event) {
+    event = (req as any).apiGateway.event;
+  } else {
+    // Fallback: try to get from global (shouldn't be needed if middleware worked)
+    const globalEvent = (global as any).currentApiGatewayEvent;
+    if (globalEvent) {
+      event = globalEvent;
+      // Also attach it to req for consistency
+      if (!req.apiGateway) {
+        (req as any).apiGateway = {};
+      }
+      (req as any).apiGateway.event = event;
+    }
+  }
+  
+  // Extract claims from the event
+  const claims = event?.requestContext?.authorizer?.claims;
+  
+  console.log("Image API attachAuth: event found:", !!event);
+  console.log("Image API attachAuth: claims found:", !!claims);
   if (claims) {
+    console.log("Image API attachAuth: sub:", claims.sub);
     let groups: string[] = [];
     if (claims["cognito:groups"]) {
       if (typeof claims["cognito:groups"] === "string") {

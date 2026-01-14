@@ -4,6 +4,7 @@ import { attachAuth, requireAuth } from "../middleware/auth";
 
 const router: RouterType = Router();
 
+// All image routes require authentication
 router.use(attachAuth, requireAuth);
 
 router.post("/submit", submitHandler);

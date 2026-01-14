@@ -1,4 +1,4 @@
-import express, { Request, Response, Application } from "express";
+import express, { Request, Response, Application, NextFunction } from "express";
 import cors from "cors";
 import imageRoutes from "./routes/imageRoutes";
 
@@ -24,6 +24,27 @@ app.options("*", (_req: Request, res: Response) => {
 
 app.use(express.json());
 
+// Middleware to manually attach API Gateway event to request
+// serverless-express should attach event to req.apiGateway.event, but it's not working
+// So we manually attach it from the global variable set in the handler
+// This MUST run before any routes that need auth (like /v1/submit, /v1/gallery)
+app.use((req: any, _res: Response, next: NextFunction) => {
+  console.log("Image API: Middleware attaching event, path:", req.path);
+  // Manually attach event from global variable
+  const event = (global as any).currentApiGatewayEvent;
+  if (event) {
+    console.log("Image API: Event found, attaching to req.apiGateway");
+    if (!req.apiGateway) {
+      req.apiGateway = {};
+    }
+    req.apiGateway.event = event;
+    console.log("Image API: Event attached, authorizer claims:", event?.requestContext?.authorizer?.claims ? "present" : "missing");
+  } else {
+    console.log("Image API: WARNING - No event found in global variable");
+  }
+  next();
+});
+
 app.get("/health", (_req: Request, res: Response) => {
   res.json({ status: "ok", service: "image-service" });
 });
@@ -41,4 +62,6 @@ app.use((err: any, _req: Request, res: Response, _next: any) => {
   res.status(status).json({ error: message });
 });
 
+// Export as named export (matching working pattern from 121-api-gateway-authorizer)
 export { app };
+export default app;

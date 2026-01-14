@@ -177,5 +177,16 @@ export class CognitoStack extends Stack {
     });
 
     // Note: UserPool is now passed directly to API stacks as a prop, no SSM parameter needed
+
+    // Output User Pool information for verification
+    new CfnOutput(this, "UserPoolId", {
+      value: this.userPool.userPoolId,
+      description: "Cognito User Pool ID",
+    });
+
+    new CfnOutput(this, "UserPoolArn", {
+      value: this.userPool.userPoolArn,
+      description: "Cognito User Pool ARN",
+    });
   }
 }

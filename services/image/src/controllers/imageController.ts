@@ -26,11 +26,8 @@ export async function submitHandler(
   console.log("====================================");
 
   try {
-    const auth = (req as any).auth as AuthUser | undefined;
-    if (!auth || !auth.sub) {
-      return res.status(401).json({ error: "Authentication required" });
-    }
-
+    // Auth is guaranteed by requireAuth middleware, so we can safely access it
+    const auth = (req as any).auth as AuthUser;
     // Use sub as username (Cognito user identifier)
     const username = auth.sub;
     const { imageName } = req.body;
@@ -109,11 +106,8 @@ export async function galleryHandler(
   console.log("====================================");
 
   try {
-    const auth = (req as any).auth as AuthUser | undefined;
-    if (!auth || !auth.sub) {
-      return res.status(401).json({ error: "Authentication required" });
-    }
-
+    // Auth is guaranteed by requireAuth middleware, so we can safely access it
+    const auth = (req as any).auth as AuthUser;
     const username = auth.sub;
     console.log(`Authenticated user - username: ${username}`);
 

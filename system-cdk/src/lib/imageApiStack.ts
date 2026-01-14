@@ -14,11 +14,9 @@ import {
   EndpointType,
   SecurityPolicy,
   LambdaIntegration,
+  MockIntegration,
   CognitoUserPoolsAuthorizer,
   AuthorizationType,
-  MockIntegration,
-  PassthroughBehavior,
-  MethodResponse,
   GatewayResponse,
   ResponseType,
 } from "aws-cdk-lib/aws-apigateway";
@@ -67,9 +65,6 @@ export class ImageApiStack extends Stack {
       );
     }
 
-    // Use UserPool passed as prop
-    const { userPool } = props;
-
     const apiDomainName = `${apiSubdomain}.${domainName}`;
 
     const zone = HostedZone.fromHostedZoneAttributes(
@@ -110,6 +105,7 @@ export class ImageApiStack extends Stack {
         nodeModules: [
           "express",
           "cors",
+          "@vendia/serverless-express",
           "pg",
           "@aws-sdk/client-s3",
           "@aws-sdk/s3-request-presigner",
@@ -185,12 +181,11 @@ export class ImageApiStack extends Stack {
     });
 
     // Create Cognito authorizer
-    // Force recreation by using a unique ID
     const authorizer = new CognitoUserPoolsAuthorizer(
       this,
-      "ImageApiCognitoAuthorizer",
+      "CognitoAuthorizer",
       {
-        cognitoUserPools: [userPool],
+        cognitoUserPools: [props.userPool],
         identitySource: "method.request.header.Authorization",
       }
     );
@@ -199,95 +194,103 @@ export class ImageApiStack extends Stack {
       proxy: true,
     });
 
-    // Public /health endpoint
-    const healthResource = api.root.addResource("health");
-    healthResource.addMethod("GET", lambdaIntegration, {
-      authorizationType: AuthorizationType.NONE,
-    });
-    // Add OPTIONS for /health endpoint
-    healthResource.addMethod("OPTIONS", new MockIntegration({
+    // Create a MockIntegration for OPTIONS requests (CORS preflight)
+    const corsMockIntegration = new MockIntegration({
       integrationResponses: [
         {
           statusCode: "200",
           responseParameters: {
+            "method.response.header.Access-Control-Allow-Origin": "'*'",
             "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
-            "method.response.header.Access-Control-Allow-Origin": "'*'",
-            "method.response.header.Access-Control-Allow-Methods": "'GET,OPTIONS'",
-          },
-        },
-      ],
-      passthroughBehavior: PassthroughBehavior.NEVER,
-      requestTemplates: {
-        "application/json": '{"statusCode": 200}',
-      },
-    }), {
-      methodResponses: [
-        {
-          statusCode: "200",
-          responseParameters: {
-            "method.response.header.Access-Control-Allow-Headers": true,
-            "method.response.header.Access-Control-Allow-Origin": true,
-            "method.response.header.Access-Control-Allow-Methods": true,
-          },
-        },
-      ],
-      authorizationType: AuthorizationType.NONE,
-    });
-
-    const v1Resource = api.root.addResource("v1");
-    const proxyResource = v1Resource.addResource("{proxy+}");
-
-    // Add OPTIONS method for CORS preflight (no authentication required)
-    // This must be added before the ANY method to ensure OPTIONS requests are handled
-    proxyResource.addMethod("OPTIONS", new MockIntegration({
-      integrationResponses: [
-        {
-          statusCode: "200",
-          responseParameters: {
-            "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'",
-            "method.response.header.Access-Control-Allow-Origin": "'*'",
             "method.response.header.Access-Control-Allow-Methods": "'GET,POST,PUT,DELETE,OPTIONS'",
           },
         },
       ],
-      passthroughBehavior: PassthroughBehavior.NEVER,
       requestTemplates: {
         "application/json": '{"statusCode": 200}',
       },
-    }), {
+    });
+
+    const corsMethodOptions = {
       methodResponses: [
         {
           statusCode: "200",
           responseParameters: {
-            "method.response.header.Access-Control-Allow-Headers": true,
             "method.response.header.Access-Control-Allow-Origin": true,
+            "method.response.header.Access-Control-Allow-Headers": true,
             "method.response.header.Access-Control-Allow-Methods": true,
           },
         },
       ],
+    };
+
+    // Health endpoint (public, no auth required)
+    const healthResource = api.root.addResource("health");
+    healthResource.addMethod("GET", lambdaIntegration, {
+      authorizationType: AuthorizationType.NONE,
+      methodResponses: [
+        {
+          statusCode: "200",
+          responseParameters: {
+            "method.response.header.Access-Control-Allow-Origin": true,
+            "method.response.header.Access-Control-Allow-Headers": true,
+            "method.response.header.Access-Control-Allow-Methods": true,
+          },
+        },
+      ],
+    });
+    healthResource.addMethod("OPTIONS", corsMockIntegration, {
+      ...corsMethodOptions,
       authorizationType: AuthorizationType.NONE,
     });
 
-    // All /v1/* routes require Cognito authentication
-    // Add explicit methods for common HTTP verbs
-    proxyResource.addMethod("GET", lambdaIntegration, {
+    // V1 routes (require Cognito authentication)
+    const v1Resource = api.root.addResource("v1");
+    
+    const submitResource = v1Resource.addResource("submit");
+    submitResource.addMethod("POST", lambdaIntegration, {
       authorizationType: AuthorizationType.COGNITO,
       authorizer: authorizer,
+      methodResponses: [
+        {
+          statusCode: "200",
+          responseParameters: {
+            "method.response.header.Access-Control-Allow-Origin": true,
+            "method.response.header.Access-Control-Allow-Headers": true,
+            "method.response.header.Access-Control-Allow-Methods": true,
+          },
+        },
+      ],
     });
-    proxyResource.addMethod("POST", lambdaIntegration, {
-      authorizationType: AuthorizationType.COGNITO,
-      authorizer: authorizer,
+    // Add OPTIONS method for CORS preflight (no auth required)
+    submitResource.addMethod("OPTIONS", corsMockIntegration, {
+      ...corsMethodOptions,
+      authorizationType: AuthorizationType.NONE,
     });
-    proxyResource.addMethod("PUT", lambdaIntegration, {
+
+    const galleryResource = v1Resource.addResource("gallery");
+    galleryResource.addMethod("GET", lambdaIntegration, {
       authorizationType: AuthorizationType.COGNITO,
       authorizer: authorizer,
+      methodResponses: [
+        {
+          statusCode: "200",
+          responseParameters: {
+            "method.response.header.Access-Control-Allow-Origin": true,
+            "method.response.header.Access-Control-Allow-Headers": true,
+            "method.response.header.Access-Control-Allow-Methods": true,
+          },
+        },
+      ],
     });
-    proxyResource.addMethod("DELETE", lambdaIntegration, {
-      authorizationType: AuthorizationType.COGNITO,
-      authorizer: authorizer,
+    // Add OPTIONS method for CORS preflight (no auth required)
+    galleryResource.addMethod("OPTIONS", corsMockIntegration, {
+      ...corsMethodOptions,
+      authorizationType: AuthorizationType.NONE,
     });
 
     // Add gateway responses with CORS headers for authorizer errors
+    // This ensures CORS headers are present even when API Gateway rejects requests before they reach Lambda
     api.addGatewayResponse("UnauthorizedGatewayResponse", {
       type: ResponseType.UNAUTHORIZED,
       statusCode: "401",
@@ -314,6 +317,16 @@ export class ImageApiStack extends Stack {
 
     new CfnOutput(this, "ApiGatewayUrl", {
       value: api.url,
+    });
+
+    new CfnOutput(this, "UserPoolArn", {
+      value: props.userPool.userPoolArn,
+      description: "User Pool ARN used by the authorizer",
+    });
+
+    new CfnOutput(this, "UserPoolId", {
+      value: props.userPool.userPoolId,
+      description: "User Pool ID used by the authorizer",
     });
   }
 }
